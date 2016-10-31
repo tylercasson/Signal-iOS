@@ -4,7 +4,13 @@ cache: cocoapods # pod install somtimes takes >20 minutes, so lets cache this
 osx_image: xcode8
 
 env:
-  -EARLY_START_SIMULATOR=1 # early starting simulator reduces false negatives due to test timeouts
+  global:
+    # early starting simulator reduces false negatives due to test timeouts
+    - EARLY_START_SIMULATOR=1
+  matrix:
+    - DEVICE_TARGET_PATTERN="iPhone 7 (10.0) \[.*\]"
+    - DEVICE_TARGET_PATTERN="iPhone 6 (9.3) \[.*\]"
+    - DEVICE_TARGET_PATTERN="iPhone 5 (8.3) \[.*\]"
 
 before_install:
     - brew update # we may not be running the latest version so always update
