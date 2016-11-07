@@ -1,0 +1,8 @@
+# For more information about this configuration visit
+# https://github.com/fastlane/fastlane/tree/master/scan#scanfile
+
+#workspace "Example/TSKitiOSTestApp/TSKitiOSTestApp.xcworkspace"
+scheme "Signal"
+devices ["iPhone 6"]
+skip_build true
+
