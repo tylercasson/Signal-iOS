@@ -233,10 +233,6 @@ static NSString *const kURLHostVerifyPrefix             = @"verify";
 
     [[TSAccountManager sharedInstance] ifRegistered:YES
                                            runAsync:^{
-                                               // We're double checking that the app is active, to be sure since we
-                                               // can't verify in production env due to code
-                                               // signing.
-                                               [TSSocketManager becomeActiveFromForeground];
                                                [[Environment getCurrent].contactsManager verifyABPermission];
                                                
                                                // This will fetch new messages, if we're using domain
