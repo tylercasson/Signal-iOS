@@ -157,8 +157,8 @@ protocol CallServiceObserver: class {
     // Used to coordinate promises across delegate methods
     var fulfillCallConnectedPromise: (() -> Void)?
 
-//    var localVideoTrack: RTCVideoTrack?
-    var localVideoTrack: RTCVideoTrack? {
+    //    var localVideoTrack: RTCVideoTrack?
+    weak var localVideoTrack: RTCVideoTrack? {
         didSet {
             assertOnSignalingQueue()
 
@@ -168,13 +168,13 @@ protocol CallServiceObserver: class {
         }
     }
 
-    var remoteVideoTrack: RTCVideoTrack? {
+    weak var remoteVideoTrack: RTCVideoTrack? {
         didSet {
             assertOnSignalingQueue()
 
             Logger.info("\(self.TAG) \(#function)")
 
-        fireDidUpdateVideoTracks()
+            fireDidUpdateVideoTracks()
         }
     }
 

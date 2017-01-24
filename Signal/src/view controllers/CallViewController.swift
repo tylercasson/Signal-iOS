@@ -64,8 +64,8 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
 
     var remoteVideoView: RTCEAGLVideoView!
     var localVideoView: RTCCameraPreviewView!
-    var localVideoTrack: RTCVideoTrack?
-    var remoteVideoTrack: RTCVideoTrack?
+    weak var localVideoTrack: RTCVideoTrack?
+    weak var remoteVideoTrack: RTCVideoTrack?
     var remoteVideoSize: CGSize! = CGSize.zero
 
     // MARK: Control Groups
