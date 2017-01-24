@@ -140,7 +140,7 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
 
         // Subscribe for future call updates
         call.addObserverAndSyncState(observer: self)
-        
+
         Environment.getCurrent().callService.addObserverAndSyncState(observer:self)
     }
 
@@ -164,6 +164,8 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
         remoteVideoView = RTCEAGLVideoView()
         remoteVideoView.delegate = self
         localVideoView = RTCCameraPreviewView()
+        remoteVideoView.isHidden = true
+        localVideoView.isHidden = true
         self.view.addSubview(remoteVideoView)
         self.view.addSubview(localVideoView)
     }
@@ -325,8 +327,6 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
             hasConstraints = true
 
             let topMargin = CGFloat(40)
-            let videoPreviewHMargin = CGFloat(30)
-            let videoPreviewVMargin = CGFloat(30)
             let contactHMargin = CGFloat(30)
             let contactVSpacing = CGFloat(3)
             let ongoingHMargin = ScaleFromIPhone5To7Plus(46, 72)
@@ -337,6 +337,11 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
             // The buttons have built-in 10% margins, so to appear centered
             // the avatar's bottom spacing should be a bit less.
             let avatarBottomSpacing = ScaleFromIPhone5To7Plus(18, 41)
+            // Layout of the local video view is a bit unusual because 
+            // although the view is square, it will be used
+            let videoPreviewHMargin = CGFloat(0)
+//             Top-align video preview with contact name.
+//            let videoPreviewVMargin = contactVSpacing
 
             // Dark blurred background.
             blurView.autoPinEdgesToSuperviewEdges()
@@ -347,8 +352,8 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
             // TODO: Specify size of localVideoView.
             // TODO: Prevent overlap of localVideoView and contact views.
             localVideoView.autoPinEdge(toSuperviewEdge:.right, withInset:videoPreviewHMargin)
-            localVideoView.autoPinEdge(toSuperviewEdge:.top, withInset:videoPreviewVMargin)
-            let localVideoSize = ScaleFromIPhone5To7Plus(40, 50)
+            localVideoView.autoPinEdge(toSuperviewEdge:.top, withInset:topMargin)
+            let localVideoSize = ScaleFromIPhone5To7Plus(80, 100)
             localVideoView.autoSetDimension(.width, toSize:localVideoSize)
             localVideoView.autoSetDimension(.height, toSize:localVideoSize)
             remoteVideoView.addRedBorder()
@@ -383,14 +388,14 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
         }
 
         super.updateViewConstraints()
-        
+
         DispatchQueue.main.async {
             //                Logger.error("blurView \(NSStringFromCGRect(blurView.frame))")
             Logger.error("self.view \(NSStringFromCGRect(self.view.frame))")
             Logger.error("blurView \(NSStringFromCGRect(self.blurView.frame))")
             Logger.error("localVideoView \(NSStringFromCGRect(self.localVideoView.frame))")
             Logger.error("remoteVideoView \(NSStringFromCGRect(self.remoteVideoView.frame))")
-            
+
 //            Logger.error("contactNameLabel \(NSStringFromCGRect(self.contactNameLabel.frame))")
 //            Logger.error("callStatusLabel \(NSStringFromCGRect(self.callStatusLabel.frame))")
 //            Logger.error("contactAvatarView \(NSStringFromCGRect(self.contactAvatarView.frame))")
@@ -418,10 +423,10 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
             Logger.flush()
         }
     }
-    
+
     func traverseViewHierarchy(view: UIView!, visitor: (UIView) -> Void) {
         visitor(view)
-        
+
         for subview in view.subviews {
             traverseViewHierarchy(view:subview, visitor:visitor)
         }
@@ -650,7 +655,7 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
             self.updateCallUI(callState: call.state)
         }
     }
-    
+
 //    internal func isLocalVideoActiveDidChange(call: SignalCall, isEnabled: Bool) {
 //        Logger.info("\(TAG) \(#function): \(isEnabled)")
 //        DispatchQueue.main.async {
@@ -668,25 +673,40 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
     // MARK: - Video
 
     internal func updateLocalVideoTrack(localVideoTrack: RTCVideoTrack?) {
-        if (self.localVideoTrack == localVideoTrack) {
+        AssertIsOnMainThread()
+        if self.localVideoTrack == localVideoTrack {
             return
         }
 
+        Logger.info("x")
+        Logger.flush()
+        Logger.info("\(TAG) x")
+        Logger.flush()
         Logger.info("\(TAG) \(#function): \(localVideoTrack)")
-
+        Logger.flush()
+        Logger.info("\(TAG) \(#function) self: \(self)")
+        Logger.flush()
+        Logger.info("\(TAG) \(#function) self.localVideoTrack: \(self.localVideoTrack)")
+        Logger.flush()
+        Logger.info("\(TAG) \(#function) localVideoTrack: \(localVideoTrack)")
+        Logger.flush()
         self.localVideoTrack = localVideoTrack
 
-        var source : RTCAVFoundationVideoSource?
+        var source: RTCAVFoundationVideoSource?
         if localVideoTrack?.source is RTCAVFoundationVideoSource {
             source = localVideoTrack?.source as! RTCAVFoundationVideoSource
         }
         localVideoView.captureSession = source?.captureSession
+        let isHidden = source == nil
+        Logger.info("\(TAG) \(#function) isHidden: \(isHidden)")
+        localVideoView.isHidden = source == nil
 
         updateVideoViews()
     }
 
     internal func updateRemoteVideoTrack(remoteVideoTrack: RTCVideoTrack?) {
-        if (self.remoteVideoTrack == remoteVideoTrack) {
+        AssertIsOnMainThread()
+        if self.remoteVideoTrack == remoteVideoTrack {
             return
         }
 
@@ -711,7 +731,7 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
     internal func didUpdateVideoTracks(localVideoTrack: RTCVideoTrack?,
                                        remoteVideoTrack: RTCVideoTrack?) {
         AssertIsOnMainThread()
-        
+
         updateLocalVideoTrack(localVideoTrack:localVideoTrack)
         updateRemoteVideoTrack(remoteVideoTrack:remoteVideoTrack)
     }
@@ -719,7 +739,7 @@ class CallViewController: UIViewController, CallObserver, CallServiceObserver, R
     // MARK: - RTCEAGLVideoViewDelegate
 
     internal func videoView(_ videoView: RTCEAGLVideoView, didChangeVideoSize size: CGSize) {
-        if (videoView != remoteVideoView) {
+        if videoView != remoteVideoView {
             return
         }
 

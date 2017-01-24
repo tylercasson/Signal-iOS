@@ -35,12 +35,12 @@ protocol PeerConnectionClientDelegate: class {
      * Once the peerconnection is established, we can receive messages via the data channel, and notify the delegate.
      */
     func peerConnectionClient(_ peerconnectionClient: PeerConnectionClient, received dataChannelMessage: OWSWebRTCProtosData)
-    
+
     /**
      * Fired whenever the local video track become active or inactive.
      */
     func peerConnectionClient(_ peerconnectionClient: PeerConnectionClient, didUpdateLocal videoTrack: RTCVideoTrack?)
-    
+
     /**
      * Fired whenever the remote video track become active or inactive.
      */
@@ -142,6 +142,9 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
 
         // TODO: Revisit the cameraConstraints.
         let videoSource = factory.avFoundationVideoSource(with: cameraConstraints)
+//        if videoSource.canUseBackCamera {
+        videoSource.useBackCamera = false
+//  useBackCamera      }
 //        assert(videoSource != nil, "videoSource should be non-nil.")
         let videoTrack = factory.videoTrack(with: videoSource, trackId: Identifiers.videoTrack.rawValue)
 //        assert(videoTrack != nil, "videoTrack should be non-nil.")
@@ -173,7 +176,7 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
         }
 
         videoTrack.isEnabled = enabled
-        
+
         if let delegate = delegate {
             delegate.peerConnectionClient(self, didUpdateLocal: enabled ? videoTrack : nil)
         }
@@ -387,12 +390,12 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
         switch newState {
         case .connected, .completed:
             if let delegate = delegate {
-                self.delegate.peerConnectionClientIceConnected(self)
+                delegate.peerConnectionClientIceConnected(self)
             }
         case .failed:
             Logger.warn("\(self.TAG) RTCIceConnection failed.")
             if let delegate = delegate {
-                self.delegate.peerConnectionClientIceFailed(self)
+                delegate.peerConnectionClientIceFailed(self)
             }
         default:
             Logger.debug("\(self.TAG) ignoring change IceConnectionState:\(newState.debugDescription)")
@@ -408,7 +411,7 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
     public func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {
         Logger.debug("\(TAG) didGenerate IceCandidate:\(candidate.sdp)")
         if let delegate = delegate {
-            self.delegate.peerConnectionClient(self, addedLocalIceCandidate: candidate)
+            delegate.peerConnectionClient(self, addedLocalIceCandidate: candidate)
         }
     }
 

@@ -121,9 +121,9 @@ protocol CallServiceObserver: class {
         didSet {
             assertOnSignalingQueue()
 //            AssertIsOnMainThread()
-            
+
             oldValue?.removeObserver(self)
-            
+
             // TODO: Remove self as observer from old call.
             // TODO: Add self as observer to new call.
             // TODO: Observer manipulations should happen on main thread?
@@ -161,23 +161,23 @@ protocol CallServiceObserver: class {
     var localVideoTrack: RTCVideoTrack? {
         didSet {
             assertOnSignalingQueue()
-            
+
             Logger.info("\(self.TAG) \(#function)")
 
             fireDidUpdateVideoTracks()
         }
     }
-    
+
     var remoteVideoTrack: RTCVideoTrack? {
         didSet {
             assertOnSignalingQueue()
-        
+
             Logger.info("\(self.TAG) \(#function)")
-        
+
         fireDidUpdateVideoTracks()
         }
     }
-    
+
     required init(accountManager: AccountManager, contactsManager: OWSContactsManager, messageSender: MessageSender, notificationsAdapter: CallNotificationsAdapter) {
         self.accountManager = accountManager
         self.messageSender = messageSender
@@ -915,17 +915,23 @@ protocol CallServiceObserver: class {
     }
 
     internal func peerConnectionClient(_ peerconnectionClient: PeerConnectionClient, didUpdateLocal videoTrack: RTCVideoTrack?) {
-        CallService.signalingQueue.async {
-            self.localVideoTrack = videoTrack
+        CallService.signalingQueue.async { [weak self] in
+            if let strongSelf = self {
+                strongSelf.localVideoTrack = videoTrack
+                strongSelf.fireDidUpdateVideoTracks()
+            }
         }
     }
-    
+
     internal func peerConnectionClient(_ peerconnectionClient: PeerConnectionClient, didUpdateRemote videoTrack: RTCVideoTrack?) {
-        CallService.signalingQueue.async {
-            self.remoteVideoTrack = videoTrack
+        CallService.signalingQueue.async { [weak self] in
+            if let strongSelf = self {
+                strongSelf.remoteVideoTrack = videoTrack
+                strongSelf.fireDidUpdateVideoTracks()
+            }
         }
     }
-    
+
     // MARK: Helpers
 
     /**
@@ -984,6 +990,7 @@ protocol CallServiceObserver: class {
      */
     private func terminateCall() {
         assertOnSignalingQueue()
+
         Logger.debug("\(TAG) in \(#function)")
 
         PeerConnectionClient.stopAudioSession()
@@ -991,34 +998,38 @@ protocol CallServiceObserver: class {
         peerConnectionClient?.terminate()
 
         peerConnectionClient = nil
+        localVideoTrack = nil
+        remoteVideoTrack = nil
         call?.removeAllObservers()
         call = nil
         thread = nil
         incomingCallPromise = nil
         sendIceUpdatesImmediately = true
         pendingIceUpdateMessages = []
+
+        fireDidUpdateVideoTracks()
     }
-    
+
     // MARK: - CallObserver
-    
+
     internal func stateDidChange(call: SignalCall, state: CallState) {
         DispatchQueue.main.async { [weak self] in
             Logger.info("\(self?.TAG) \(#function): \(state)")
             self?.updateIsVideoEnabled()
         }
     }
-    
+
     internal func hasVideoDidChange(call: SignalCall, hasVideo: Bool) {
         DispatchQueue.main.async { [weak self] in
             Logger.info("\(self?.TAG) \(#function): \(hasVideo)")
             self?.updateIsVideoEnabled()
         }
     }
-    
+
     internal func muteDidChange(call: SignalCall, isMuted: Bool) {
         // Do nothing
     }
-    
+
     internal func speakerphoneDidChange(call: SignalCall, isEnabled: Bool) {
         // Do nothing
     }
@@ -1047,7 +1058,7 @@ protocol CallServiceObserver: class {
         AssertIsOnMainThread()
 
         Logger.info("\(self.TAG) \(#function): \(shouldHaveLocalVideoTrack())")
-        
+
         peerConnectionClient?.setVideoEnabled(enabled: shouldHaveLocalVideoTrack())
 
 //        if shouldHaveLocalVideoTrack() {
@@ -1073,52 +1084,52 @@ protocol CallServiceObserver: class {
 //        }
 //        // TODO: Inform observers.
     }
-    
+
     // MARK: - Observers
-    
+
     func addObserverAndSyncState(observer: CallServiceObserver) {
         AssertIsOnMainThread()
         //        objc_sync_enter(self)
-        
+
         observers.append(Weak(value: observer))
-        
+
 //        // Synchronize observer with current call state
-        
+
         // TODO: It's not safe to access these properties off of the signaling queue?
         observer.didUpdateVideoTracks(localVideoTrack:localVideoTrack,
                                       remoteVideoTrack:remoteVideoTrack)
 //        observer.stateDidChange(call: self, state: self.state)
-        
+
         //        objc_sync_exit(self)
     }
-    
+
     func removeObserver(_ observer: CallServiceObserver) {
         AssertIsOnMainThread()
         //        objc_sync_enter(self)
-        
+
         while let index = observers.index(where: { $0.value === observer }) {
             observers.remove(at: index)
         }
-        
+
         //        objc_sync_exit(self)
     }
-    
+
     func removeAllObservers() {
         AssertIsOnMainThread()
         //        objc_sync_enter(self)
-        
+
         observers = []
-        
+
         //        objc_sync_exit(self)
     }
-    
+
     func fireDidUpdateVideoTracks() {
 //        AssertIsOnMainThread()
         assertOnSignalingQueue()
-        
+
         let localVideoTrack = self.localVideoTrack
         let remoteVideoTrack = self.remoteVideoTrack
-        
+
         DispatchQueue.main.async { [weak self] in
             if let strongSelf = self {
                 for observer in strongSelf.observers {
