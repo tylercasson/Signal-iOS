@@ -54,3 +54,5 @@
 #import <SignalServiceKit/TSStorageManager+keyingMaterial.h>
 #import <SignalServiceKit/TSThread.h>
 #import <WebRTC/RTCAudioSession.h>
+#import <WebRTC/RTCCameraPreviewView.h>
+#import <WebRTC/RTCEAGLVideoView.h>

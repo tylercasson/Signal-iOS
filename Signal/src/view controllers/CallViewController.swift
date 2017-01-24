@@ -10,7 +10,7 @@ import PromiseKit
 // TODO: Add logic to button handlers.
 // TODO: Ensure buttons enabled & disabled as necessary.
 @objc(OWSCallViewController)
-class CallViewController: UIViewController, CallObserver {
+class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelegate {
 
     enum CallDirection {
         case unspecified, outgoing, incoming
@@ -59,6 +59,14 @@ class CallViewController: UIViewController, CallObserver {
 
     var acceptIncomingButton: UIButton!
     var declineIncomingButton: UIButton!
+
+    // MARK: Video Views
+
+    var remoteVideoView: RTCEAGLVideoView!
+    var localVideoView: RTCCameraPreviewView!
+    var localVideoTrack: RTCVideoTrack?
+    var remoteVideoTrack: RTCVideoTrack?
+    var remoteVideoSize: CGSize! = CGSize.zero
 
     // MARK: Control Groups
 
@@ -134,15 +142,28 @@ class CallViewController: UIViewController, CallObserver {
         call.addObserverAndSyncState(observer: self)
     }
 
+    // MARK: - Create Views
+
     func createViews() {
         // Dark blurred background.
         let blurEffect = UIBlurEffect(style: .dark)
         blurView = UIVisualEffectView(effect: blurEffect)
         self.view.addSubview(blurView)
 
+        // Create the video views first, as they are under the other views.
+        createVideoViews()
+
         createContactViews()
         createOngoingCallControls()
         createIncomingCallControls()
+    }
+
+    func createVideoViews() {
+        remoteVideoView = RTCEAGLVideoView()
+        remoteVideoView.delegate = self
+        localVideoView = RTCCameraPreviewView()
+        self.view.addSubview(remoteVideoView)
+        self.view.addSubview(localVideoView)
     }
 
     func createContactViews() {
@@ -291,6 +312,8 @@ class CallViewController: UIViewController, CallObserver {
         return row
     }
 
+    // MARK: - Layout
+
     override func updateViewConstraints() {
         if !hasConstraints {
             // We only want to create our constraints once.
@@ -300,6 +323,8 @@ class CallViewController: UIViewController, CallObserver {
             hasConstraints = true
 
             let topMargin = CGFloat(40)
+            let videoPreviewHMargin = CGFloat(30)
+            let videoPreviewVMargin = CGFloat(30)
             let contactHMargin = CGFloat(30)
             let contactVSpacing = CGFloat(3)
             let ongoingHMargin = ScaleFromIPhone5To7Plus(46, 72)
@@ -313,6 +338,14 @@ class CallViewController: UIViewController, CallObserver {
 
             // Dark blurred background.
             blurView.autoPinEdgesToSuperviewEdges()
+
+            // TODO: Add black background behind video views.
+            // TODO: Honor aspect ratio of remote video.
+            remoteVideoView.autoPinEdgesToSuperviewEdges()
+            // TODO: Specify size of localVideoView.
+            // TODO: Prevent overlap of localVideoView and contact views.
+            localVideoView.autoPinEdge(toSuperviewEdge:.right, withInset:videoPreviewHMargin)
+            localVideoView.autoPinEdge(toSuperviewEdge:.top, withInset:videoPreviewVMargin)
 
             contactNameLabel.autoPinEdge(toSuperviewEdge:.top, withInset:topMargin)
             contactNameLabel.autoPinWidthToSuperview(withMargin:contactHMargin)
@@ -345,6 +378,8 @@ class CallViewController: UIViewController, CallObserver {
         super.updateViewConstraints()
     }
 
+    // MARK: - Methods
+
     // objc accessible way to set our swift enum.
     func setOutgoingCallDirection() {
         callDirection = .outgoing
@@ -359,6 +394,8 @@ class CallViewController: UIViewController, CallObserver {
         // TODO Show something in UI.
         Logger.error("\(TAG) call failed with error: \(error)")
     }
+
+    // MARK: - View State
 
     func localizedTextForCallState(_ callState: CallState) -> String {
         assert(Thread.isMainThread)
@@ -563,5 +600,61 @@ class CallViewController: UIViewController, CallObserver {
         DispatchQueue.main.async {
             self.updateCallUI(callState: call.state)
         }
+    }
+
+    // MARK: - Video
+
+    internal func didReceiveLocalVideoTrack(localVideoTrack: RTCVideoTrack) {
+        if (self.localVideoTrack == localVideoTrack) {
+            return
+        }
+
+        Logger.info("\(TAG) \(#function): \(localVideoTrack)")
+
+        self.localVideoTrack = localVideoTrack
+
+//        RTCAVFoundationVideoSource *source = nil;
+//        if ([localVideoTrack.source
+//            isKindOfClass:[RTCAVFoundationVideoSource class]]) {
+//            source = (RTCAVFoundationVideoSource*)localVideoTrack.source;
+//        }
+//        _videoCallView.localVideoView.captureSession = source.captureSession;
+
+        updateVideoViews()
+    }
+
+    internal func didReceiveRemoteVideoTrack(remoteVideoTrack: RTCVideoTrack) {
+        if (self.remoteVideoTrack == remoteVideoTrack) {
+            return
+        }
+
+        Logger.info("\(TAG) \(#function): \(remoteVideoTrack)")
+
+//        [_remoteVideoTrack removeRenderer:_videoCallView.remoteVideoView];
+//        _remoteVideoTrack = nil;
+//        [_videoCallView.remoteVideoView renderFrame:nil];
+//        _remoteVideoTrack = remoteVideoTrack;
+//        [_remoteVideoTrack addRenderer:_videoCallView.remoteVideoView];
+
+        self.remoteVideoTrack = remoteVideoTrack
+        updateVideoViews()
+    }
+
+    internal func updateVideoViews() {
+        // TODO: Update layout and perhaps view state as well.
+    }
+
+    // MARK: - RTCEAGLVideoViewDelegate
+
+    internal func videoView(_ videoView: RTCEAGLVideoView, didChangeVideoSize size: CGSize) {
+        if (videoView != remoteVideoView) {
+            return
+        }
+
+        Logger.info("\(TAG) \(#function): \(size)")
+
+        remoteVideoSize = size
+//        [self setNeedsLayout];
+        updateVideoViews()
     }
 }
