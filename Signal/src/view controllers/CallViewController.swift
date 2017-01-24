@@ -10,7 +10,7 @@ import PromiseKit
 // TODO: Add logic to button handlers.
 // TODO: Ensure buttons enabled & disabled as necessary.
 @objc(OWSCallViewController)
-class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelegate {
+class CallViewController: UIViewController, CallObserver, CallServiceObserver, RTCEAGLVideoViewDelegate {
 
     enum CallDirection {
         case unspecified, outgoing, incoming
@@ -25,7 +25,7 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
 
     // MARK: Properties
 
-    var peerConnectionClient: PeerConnectionClient?
+//    var peerConnectionClient: PeerConnectionClient?
     var callDirection: CallDirection = .unspecified
     var thread: TSContactThread!
     var call: SignalCall!
@@ -140,6 +140,8 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
 
         // Subscribe for future call updates
         call.addObserverAndSyncState(observer: self)
+        
+        Environment.getCurrent().callService.addObserverAndSyncState(observer:self)
     }
 
     // MARK: - Create Views
@@ -346,6 +348,11 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
             // TODO: Prevent overlap of localVideoView and contact views.
             localVideoView.autoPinEdge(toSuperviewEdge:.right, withInset:videoPreviewHMargin)
             localVideoView.autoPinEdge(toSuperviewEdge:.top, withInset:videoPreviewVMargin)
+            let localVideoSize = ScaleFromIPhone5To7Plus(40, 50)
+            localVideoView.autoSetDimension(.width, toSize:localVideoSize)
+            localVideoView.autoSetDimension(.height, toSize:localVideoSize)
+            remoteVideoView.addRedBorder()
+            localVideoView.addRedBorder()
 
             contactNameLabel.autoPinEdge(toSuperviewEdge:.top, withInset:topMargin)
             contactNameLabel.autoPinWidthToSuperview(withMargin:contactHMargin)
@@ -376,6 +383,48 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
         }
 
         super.updateViewConstraints()
+        
+        DispatchQueue.main.async {
+            //                Logger.error("blurView \(NSStringFromCGRect(blurView.frame))")
+            Logger.error("self.view \(NSStringFromCGRect(self.view.frame))")
+            Logger.error("blurView \(NSStringFromCGRect(self.blurView.frame))")
+            Logger.error("localVideoView \(NSStringFromCGRect(self.localVideoView.frame))")
+            Logger.error("remoteVideoView \(NSStringFromCGRect(self.remoteVideoView.frame))")
+            
+//            Logger.error("contactNameLabel \(NSStringFromCGRect(self.contactNameLabel.frame))")
+//            Logger.error("callStatusLabel \(NSStringFromCGRect(self.callStatusLabel.frame))")
+//            Logger.error("contactAvatarView \(NSStringFromCGRect(self.contactAvatarView.frame))")
+//            
+//            Logger.error("ongoingCallView \(NSStringFromCGRect(self.ongoingCallView.frame))")
+//            //                Logger.error("ongoingCallRow1 \(NSStringFromCGRect(self.ongoingCallRow1.frame))")
+//            //                Logger.error("ongoingCallRow2 \(NSStringFromCGRect(self.ongoingCallRow2.frame))")
+//            //                Logger.error("ongoingCallRow3 \(NSStringFromCGRect(self.ongoingCallRow3.frame))")
+//            
+//            //                Logger.error("ongoingCallControlsTopRow spacer \(NSStringFromCGRect(self.ongoingCallControlsTopRow.subviews[2].frame))")
+//            //                for subview in self.ongoingCallControlsTopRow.subviews {
+//            //                    Logger.error("\t \(NSStringFromCGRect(subview.frame))")
+//            //                }
+//            //                Logger.error("ongoingCallControlsBottomRow \(NSStringFromCGRect(self.ongoingCallControlsBottomRow.frame))")
+//            Logger.error("incomingCallView \(NSStringFromCGRect(self.incomingCallView.frame))")
+//            
+//            Logger.error("acceptIncomingButton \(NSStringFromCGRect(self.acceptIncomingButton.frame))")
+//            Logger.error("declineIncomingButton \(NSStringFromCGRect(self.declineIncomingButton.frame))")
+//            Logger.error("muteButton \(NSStringFromCGRect(self.muteButton.frame))")
+//            Logger.error("speakerPhoneButton \(NSStringFromCGRect(self.speakerPhoneButton.frame))")
+//            Logger.error("ongoingTextMessageButton \(NSStringFromCGRect(self.ongoingTextMessageButton.frame))")
+//            Logger.error("incomingTextMessageButton \(NSStringFromCGRect(self.incomingTextMessageButton.frame))")
+//            Logger.error("hangUpButton \(NSStringFromCGRect(self.hangUpButton.frame))")
+//            Logger.error("videoButton \(NSStringFromCGRect(self.videoButton.frame))")
+            Logger.flush()
+        }
+    }
+    
+    func traverseViewHierarchy(view: UIView!, visitor: (UIView) -> Void) {
+        visitor(view)
+        
+        for subview in view.subviews {
+            traverseViewHierarchy(view:subview, visitor:visitor)
+        }
     }
 
     // MARK: - Methods
@@ -601,10 +650,24 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
             self.updateCallUI(callState: call.state)
         }
     }
+    
+//    internal func isLocalVideoActiveDidChange(call: SignalCall, isEnabled: Bool) {
+//        Logger.info("\(TAG) \(#function): \(isEnabled)")
+//        DispatchQueue.main.async {
+//            self.updateVideoViews()
+//        }
+//    }
+//    
+//    internal func isRemoteVideoActiveDidChange(call: SignalCall, isEnabled: Bool) {
+//        Logger.info("\(TAG) \(#function): \(isEnabled)")
+//        DispatchQueue.main.async {
+//            self.updateVideoViews()
+//        }
+//    }
 
     // MARK: - Video
 
-    internal func didReceiveLocalVideoTrack(localVideoTrack: RTCVideoTrack) {
+    internal func updateLocalVideoTrack(localVideoTrack: RTCVideoTrack?) {
         if (self.localVideoTrack == localVideoTrack) {
             return
         }
@@ -613,17 +676,16 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
 
         self.localVideoTrack = localVideoTrack
 
-//        RTCAVFoundationVideoSource *source = nil;
-//        if ([localVideoTrack.source
-//            isKindOfClass:[RTCAVFoundationVideoSource class]]) {
-//            source = (RTCAVFoundationVideoSource*)localVideoTrack.source;
-//        }
-//        _videoCallView.localVideoView.captureSession = source.captureSession;
+        var source : RTCAVFoundationVideoSource?
+        if localVideoTrack?.source is RTCAVFoundationVideoSource {
+            source = localVideoTrack?.source as! RTCAVFoundationVideoSource
+        }
+        localVideoView.captureSession = source?.captureSession
 
         updateVideoViews()
     }
 
-    internal func didReceiveRemoteVideoTrack(remoteVideoTrack: RTCVideoTrack) {
+    internal func updateRemoteVideoTrack(remoteVideoTrack: RTCVideoTrack?) {
         if (self.remoteVideoTrack == remoteVideoTrack) {
             return
         }
@@ -642,6 +704,16 @@ class CallViewController: UIViewController, CallObserver, RTCEAGLVideoViewDelega
 
     internal func updateVideoViews() {
         // TODO: Update layout and perhaps view state as well.
+    }
+
+    // MARK: - CallServiceObserver
+
+    internal func didUpdateVideoTracks(localVideoTrack: RTCVideoTrack?,
+                                       remoteVideoTrack: RTCVideoTrack?) {
+        AssertIsOnMainThread()
+        
+        updateLocalVideoTrack(localVideoTrack:localVideoTrack)
+        updateRemoteVideoTrack(remoteVideoTrack:remoteVideoTrack)
     }
 
     // MARK: - RTCEAGLVideoViewDelegate

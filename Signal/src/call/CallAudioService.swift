@@ -51,6 +51,14 @@ import Foundation
     internal func hasVideoDidChange(call: SignalCall, hasVideo: Bool) {
         // no-op
     }
+    
+//    internal func isLocalVideoActiveDidChange(call: SignalCall, isEnabled: Bool) {
+//        // Do nothing
+//    }
+//    
+//    internal func isRemoteVideoActiveDidChange(call: SignalCall, isEnabled: Bool) {
+//        // Do nothing
+//    }
 
     // MARK: - Service action handlers
 

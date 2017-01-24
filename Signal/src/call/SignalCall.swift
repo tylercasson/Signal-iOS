@@ -22,6 +22,8 @@ protocol CallObserver: class {
     func hasVideoDidChange(call: SignalCall, hasVideo: Bool)
     func muteDidChange(call: SignalCall, isMuted: Bool)
     func speakerphoneDidChange(call: SignalCall, isEnabled: Bool)
+//    func isLocalVideoActiveDidChange(call: SignalCall, isEnabled: Bool)
+//    func isRemoteVideoActiveDidChange(call: SignalCall, isEnabled: Bool)
 }
 
 /**
@@ -42,15 +44,22 @@ protocol CallObserver: class {
     
     var hasVideo = false {
         didSet {
+            objc_sync_enter(self)
+//            AssertIsOnMainThread()
+            
             Logger.debug("\(TAG) hasVideo changed: \(oldValue) -> \(hasVideo)")
             for observer in observers {
                 observer.value?.hasVideoDidChange(call: self, hasVideo: hasVideo)
             }
+            objc_sync_exit(self)
         }
     }
 
     var state: CallState {
         didSet {
+//            AssertIsOnMainThread()
+            objc_sync_enter(self)
+
             Logger.debug("\(TAG) state changed: \(oldValue) -> \(state)")
 
             // Update connectedDate
@@ -64,29 +73,70 @@ protocol CallObserver: class {
             for observer in observers {
                 observer.value?.stateDidChange(call: self, state: state)
             }
+
+            objc_sync_exit(self)
         }
     }
 
     var isMuted = false {
         didSet {
+            //            AssertIsOnMainThread()
+            objc_sync_enter(self)
+
             Logger.debug("\(TAG) muted changed: \(oldValue) -> \(isMuted)")
             for observer in observers {
                 observer.value?.muteDidChange(call: self, isMuted: isMuted)
             }
+
+            objc_sync_exit(self)
         }
     }
 
     var isSpeakerphoneEnabled = false {
         didSet {
+            //            AssertIsOnMainThread()
+            objc_sync_enter(self)
+
             Logger.debug("\(TAG) isSpeakerphoneEnabled changed: \(oldValue) -> \(isSpeakerphoneEnabled)")
             for observer in observers {
                 observer.value?.speakerphoneDidChange(call: self, isEnabled: isSpeakerphoneEnabled)
             }
+
+            objc_sync_exit(self)
         }
     }
     var connectedDate: NSDate?
 
     var error: CallError?
+
+//    // TODO: I'm not happy about hanging this state here.
+//    var isLocalVideoActive = false {
+//        didSet {
+//            //            AssertIsOnMainThread()
+//            objc_sync_enter(self)
+//            
+//            Logger.debug("\(TAG) isLocalVideoActive changed: \(oldValue) -> \(isLocalVideoActive)")
+//            for observer in observers {
+//                observer.value?.isLocalVideoActiveDidChange(call: self, isEnabled: isLocalVideoActive)
+//            }
+//            
+//            objc_sync_exit(self)
+//        }
+//    }
+//    // TODO: I'm not happy about hanging this state here.
+//    var isRemoteVideoActive = false {
+//        didSet {
+//            //            AssertIsOnMainThread()
+//            objc_sync_enter(self)
+//            
+//            Logger.debug("\(TAG) isRemoteVideoActive changed: \(oldValue) -> \(isRemoteVideoActive)")
+//            for observer in observers {
+//                observer.value?.isRemoteVideoActiveDidChange(call: self, isEnabled: isRemoteVideoActive)
+//            }
+//            
+//            objc_sync_exit(self)
+//        }
+//    }
 
     // MARK: Initializers and Factory Methods
 
@@ -108,26 +158,48 @@ protocol CallObserver: class {
     // -
 
     func addObserverAndSyncState(observer: CallObserver) {
+        //            AssertIsOnMainThread()
+        objc_sync_enter(self)
+
         observers.append(Weak(value: observer))
 
         // Synchronize observer with current call state
         observer.stateDidChange(call: self, state: self.state)
+
+        objc_sync_exit(self)
     }
 
     func removeObserver(_ observer: CallObserver) {
+        //            AssertIsOnMainThread()
+        objc_sync_enter(self)
+
         while let index = observers.index(where: { $0.value === observer }) {
             observers.remove(at: index)
         }
+
+        objc_sync_exit(self)
     }
 
     func removeAllObservers() {
+        //            AssertIsOnMainThread()
+        objc_sync_enter(self)
+
         observers = []
+
+        objc_sync_exit(self)
     }
 
     // MARK: Equatable
 
     static func == (lhs: SignalCall, rhs: SignalCall) -> Bool {
-        return lhs.localId == rhs.localId
+        //            AssertIsOnMainThread()
+        objc_sync_enter(self)
+
+        let result = lhs.localId == rhs.localId
+        
+        objc_sync_exit(self)
+        
+        return result
     }
 
     static func newCallSignalingId() -> UInt64 {
