@@ -92,7 +92,6 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
         configuration.bundlePolicy = .maxBundle
         configuration.rtcpMuxPolicy = .require
 
-
         let connectionConstraintsDict = ["DtlsSrtpKeyAgreement": "true"]
         connectionConstraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: connectionConstraintsDict)
 
@@ -131,6 +130,7 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
             return
         }
 
+        // TODO: Revisit the cameraConstraints.
         let videoSource = factory.avFoundationVideoSource(with: cameraConstraints)
         let videoTrack = factory.videoTrack(with: videoSource, trackId: Identifiers.videoTrack.rawValue)
         self.videoTrack = videoTrack

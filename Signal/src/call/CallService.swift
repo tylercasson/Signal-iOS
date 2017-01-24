@@ -104,7 +104,17 @@ fileprivate let timeoutSeconds = 60
     var peerConnectionClient: PeerConnectionClient?
     // TODO code cleanup: move thread into SignalCall? Or refactor messageSender to take SignalRecipient identifier.
     var thread: TSContactThread?
-    var call: SignalCall?
+    var call: SignalCall? {
+        didSet {
+            // TODO: Remove self as observer from old call.
+            // TODO: Add self as observer to new call.
+            // TODO: Observer manipulations should happen on main thread?
+//            call.delegate = self
+            DispatchQueue.main.async { [weak self] in
+                self?.ensureLocalVideoTrack()
+            }
+        }
+    }
 
     /**
      * In the process of establishing a connection between the clients (ICE process) we must exchange ICE updates.
@@ -122,6 +132,8 @@ fileprivate let timeoutSeconds = 60
 
     // Used to coordinate promises across delegate methods
     var fulfillCallConnectedPromise: (() -> Void)?
+
+//    var localVideoTrack: RTCVideoTrack?
 
     required init(accountManager: AccountManager, contactsManager: OWSContactsManager, messageSender: MessageSender, notificationsAdapter: CallNotificationsAdapter) {
         self.accountManager = accountManager
@@ -611,7 +623,7 @@ fileprivate let timeoutSeconds = 60
 
         // We don't risk transmitting any media until the remote client has admitted to being connected.
         peerConnectionClient.setAudioEnabled(enabled: !call.isMuted)
-        peerConnectionClient.setVideoEnabled(enabled: call.hasVideo)
+        peerConnectionClient.setVideoEnabled(enabled: shouldHaveLocalVideoTrack())
     }
 
     /**
@@ -751,7 +763,7 @@ fileprivate let timeoutSeconds = 60
         }
 
         call.hasVideo = hasVideo
-        peerConnectionClient.setVideoEnabled(enabled: hasVideo)
+        peerConnectionClient?.setVideoEnabled(enabled: shouldHaveLocalVideoTrack())
     }
 
     func handleCallKitStartVideo() {
@@ -930,6 +942,61 @@ fileprivate let timeoutSeconds = 60
         incomingCallPromise = nil
         sendIceUpdatesImmediately = true
         pendingIceUpdateMessages = []
+    }
+
+    // MARK: - Video
+
+    internal func stateDidChange(call: SignalCall, state: CallState) {
+        DispatchQueue.main.async { [weak self] in
+            Logger.info("\(self?.TAG) \(#function): \(state)")
+            self?.ensureLocalVideoTrack()
+        }
+    }
+
+    internal func hasVideoDidChange(call: SignalCall, hasVideo: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            Logger.info("\(self?.TAG) \(#function): \(hasVideo)")
+            self?.ensureLocalVideoTrack()
+        }
+    }
+
+    private func shouldHaveLocalVideoTrack() -> Bool {
+        // The iOS simulator doesn't provide any sort of camera capture
+        // support or emulation (http://goo.gl/rHAnC1) so don't bother
+        // trying to open a local stream.
+        return (!Platform.isSimulator &&
+            call != nil &&
+            call!.state == .connected &&
+            call!.hasVideo)
+    }
+
+    private func ensureLocalVideoTrack() {
+        AssertIsOnMainThread()
+
+        peerConnectionClient?.setVideoEnabled(enabled: shouldHaveLocalVideoTrack())
+//
+//        if shouldHaveLocalVideoTrack() {
+//            if localVideoTrack == nil {
+//                let mediaConstraintsDictionary = [
+//                    kRTCMediaConstraintsMinWidth : "480",
+//                    kRTCMediaConstraintsMinHeight : "640"
+//                ]
+//                let cameraConstraints = RTCMediaConstraints(nil,
+//                                                            optionalConstraints optional: mediaConstraintsDictionary)
+//                //                    [_client setMaxBitrate:[settingsModel currentMaxBitrateSettingFromStore]];
+//                
+//                //                    RTCMediaConstraints *cameraConstraints = [self cameraConstraints];
+//                let source =
+//                    [_factory avFoundationVideoSourceWithConstraints:cameraConstraints];
+//                localVideoTrack =
+//                    [_factory videoTrackWithSource:source
+//                        trackId:kARDVideoTrackId];
+//                return localVideoTrack;
+//            }
+//        } else {
+//            localVideoTrack = nil
+//        }
+//        // TODO: Inform observers.
     }
 }
 
