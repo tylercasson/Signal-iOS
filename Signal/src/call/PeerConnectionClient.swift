@@ -82,7 +82,7 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
     //
     // This queue is also used to perform expensive calls to the WebRTC API.
 //    private static let signalingQueue = DispatchQueue(label: "CallServiceSignalingQueue")
-    private static let signalingQueue = DispatchQueue.main
+//    private static let signalingQueue = DispatchQueue.main
     
     // Delegate is notified of key events in the call lifecycle.
     private weak var delegate: PeerConnectionClientDelegate!
@@ -294,9 +294,9 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
                 }
 
                 self.peerConnection.offer(for: self.defaultOfferConstraints, completionHandler: { (sdp: RTCSessionDescription?, error: Error?) in
-                    AssertIsOnMainThread()
                     
                     DispatchQueue.main.sync {
+//                        AssertIsOnMainThread()
 //                    PeerConnectionClient.signalingQueue.async {
                         guard self.peerConnection != nil else {
                             Logger.debug("\(self.TAG) \(#function) Ignoring obsolete event in terminated client")
@@ -396,9 +396,9 @@ class PeerConnectionClient: NSObject, RTCPeerConnectionDelegate, RTCDataChannelD
             Logger.debug("\(self.TAG) negotiating answer session.")
 
             peerConnection.answer(for: constraints, completionHandler: { (sdp: RTCSessionDescription?, error: Error?) in
-                AssertIsOnMainThread() 
                 
                 DispatchQueue.main.sync {
+//                    AssertIsOnMainThread()
 //                PeerConnectionClient.signalingQueue.async {
                     guard self.peerConnection != nil else {
                         Logger.debug("\(self.TAG) \(#function) Ignoring obsolete event in terminated client")
