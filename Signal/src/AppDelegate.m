@@ -17,7 +17,6 @@
 #import "Release.h"
 #import "Signal-Swift.h"
 #import "TSMessagesManager.h"
-#import "TSPreKeyManager.h"
 #import "TSSocketManager.h"
 #import "TextSecureKitEnv.h"
 #import "VersionMigrations.h"
@@ -28,6 +27,7 @@
 #import <SignalServiceKit/OWSIncomingMessageReadObserver.h>
 #import <SignalServiceKit/OWSMessageSender.h>
 #import <SignalServiceKit/TSAccountManager.h>
+#import <SignalServiceKit/TSPreKeyManager.h>
 
 @import WebRTC;
 @import Intents;
@@ -173,6 +173,9 @@ static NSString *const kURLHostVerifyPrefix             = @"verify";
         });
         RTCInitializeSSL();
     }];
+
+    // Create TSPreKeyManager singleton.
+    [TSPreKeyManager sharedInstance];
 
     return YES;
 }
