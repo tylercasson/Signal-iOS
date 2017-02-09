@@ -916,7 +916,7 @@
 "VERIFICATION_CHALLENGE_DEFAULT_TEXT" = "Codi de verificació";
 
 /* button text during registration to request phone number verification be done via phone call */
-"VERIFICATION_CHALLENGE_SEND_VIAVOICE" = "Truca'm, millor";
+"VERIFICATION_CHALLENGE_SEND_VIA_VOICE" = "Truca'm, millor";
 
 /* button text during registration to request another SMS code be sent */
 "VERIFICATION_CHALLENGE_SUBMIT_AGAIN" = "Sol·licita el codi de nou";
