@@ -85,6 +85,13 @@ static NSString *const kURLHostVerifyPrefix             = @"verify";
 
     DDLogWarn(@"%@ application: didFinishLaunchingWithOptions.", self.tag);
 
+    // Set the seed the generator for rand().
+    //
+    // We should always use arc4random() instead of rand(), but we
+    // still want to ensure that any third-party code that uses rand()
+    // gets random values.
+    srand((unsigned int)time(NULL));
+
     // XXX - careful when moving this. It must happen before we initialize TSStorageManager.
     [self verifyDBKeysAvailableBeforeBackgroundLaunch];
 
@@ -173,9 +180,6 @@ static NSString *const kURLHostVerifyPrefix             = @"verify";
         });
         RTCInitializeSSL();
     }];
-
-    // Create TSPreKeyManager singleton.
-    [TSPreKeyManager sharedInstance];
 
     return YES;
 }
@@ -280,6 +284,8 @@ static NSString *const kURLHostVerifyPrefix             = @"verify";
                                            }];
     
     [self removeScreenProtection];
+
+    [TSPreKeyManager checkPreKeysIfNecessary];
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
